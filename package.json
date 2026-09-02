@@ -2,10 +2,12 @@
   "name": "hurfa_website-server",
   "version": "1.0.0",
   "description": "A robust, scalable, and modular **REST API Backend Server** for the **Hurfa Architectural Studio & Bespoke Furniture** platform. Built with **Node.js**, **Express.js (ES Modules)**, and **PostgreSQL**, following the layered architecture, clean code principles, and full-stack patterns established in `25-26-summer-fullstack`.",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "repository": {
     "type": "git",

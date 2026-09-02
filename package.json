@@ -1,0 +1,21 @@
+{
+  "name": "hurfa_website-server",
+  "version": "1.0.0",
+  "description": "A robust, scalable, and modular **REST API Backend Server** for the **Hurfa Architectural Studio & Bespoke Furniture** platform. Built with **Node.js**, **Express.js (ES Modules)**, and **PostgreSQL**, following the layered architecture, clean code principles, and full-stack patterns established in `25-26-summer-fullstack`.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fsuaifan/Hurfa_Website-Server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fsuaifan/Hurfa_Website-Server/issues"
+  },
+  "homepage": "https://github.com/fsuaifan/Hurfa_Website-Server#readme"
+}

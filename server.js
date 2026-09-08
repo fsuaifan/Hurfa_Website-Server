@@ -6,6 +6,7 @@ import db from "./db/db.js";
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/products.js";
 import userRoutes from "./routes/users.js";
+import kitchenRoutes from "./routes/kitchens.js";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/kitchens", kitchenRoutes);
 
 // Root Test Route
 app.get("/", (req, res) => {

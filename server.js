@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import db from "./db/db.js";
 
 dotenv.config();
 
@@ -15,10 +16,17 @@ app.use(morgan("dev"));
 
 // Root Test Route
 app.get("/", (req, res) => {
-  res.send(" Hurfa API Server is running!");
+  res.send("🚀 Hurfa API Server is running!");
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Connect to Database and Start Server
+db.connect()
+  .then(() => {
+    console.log("✅ Connected to the database successfully!");
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Database connection error:", err.message);
+  });

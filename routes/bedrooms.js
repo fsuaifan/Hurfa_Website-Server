@@ -113,6 +113,33 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 /**
+ * PUT /api/bedrooms/sort
+ * Protected by adminAuth - Batch update sort order for bedrooms
+ */
+router.put("/sort", adminAuth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: "Items array is required" });
+    }
+
+    for (const item of items) {
+      if (item.id !== undefined && item.sortOrder !== undefined) {
+        await db.query("UPDATE bedrooms SET sort_order = $1 WHERE id = $2", [
+          parseInt(item.sortOrder, 10),
+          parseInt(item.id, 10),
+        ]);
+      }
+    }
+
+    res.json({ message: "Bedroom sort orders updated successfully" });
+  } catch (err) {
+    console.error("Bedroom sort order update error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * PUT /api/bedrooms/:id
  * Protected by adminAuth
  */

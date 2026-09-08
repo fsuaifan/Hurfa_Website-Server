@@ -112,7 +112,7 @@ router.get("/", async (req, res) => {
     } else if (sort === "price-high") {
       query += " ORDER BY p.price DESC NULLS LAST, p.id ASC";
     } else {
-      query += " ORDER BY p.id ASC";
+      query += " ORDER BY p.sort_order ASC, p.id ASC";
     }
 
     const result = await db.query(query, params);

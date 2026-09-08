@@ -228,6 +228,33 @@ router.post("/", adminAuth, async (req, res) => {
 });
 
 /**
+ * PUT /api/products/sort
+ * Protected by adminAuth - Batch update sort order for products
+ */
+router.put("/sort", adminAuth, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: "Items array is required" });
+    }
+
+    for (const item of items) {
+      if (item.id !== undefined && item.sortOrder !== undefined) {
+        await db.query("UPDATE products SET sort_order = $1 WHERE id = $2", [
+          parseInt(item.sortOrder, 10),
+          parseInt(item.id, 10),
+        ]);
+      }
+    }
+
+    res.json({ message: "Product sort orders updated successfully" });
+  } catch (err) {
+    console.error("Product sort order update error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * PUT /api/products/:id
  * Protected by adminAuth
  */

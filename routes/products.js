@@ -7,6 +7,14 @@ const router = express.Router();
 /**
  * Helper function to format product records for consistent client response
  */
+function normalizeStockStatus(status) {
+  if (!status) return "In Stock";
+  const s = String(status).toLowerCase().replace(/[-_]/g, " ").trim();
+  if (s === "low stock" || s === "low") return "Low Stock";
+  if (s === "out of stock" || s === "out") return "Out of Stock";
+  return "In Stock";
+}
+
 function formatProduct(row) {
   const priceNum = row.price ? parseFloat(row.price) : 0;
   const formattedPrice = row.price
@@ -39,8 +47,8 @@ function formatProduct(row) {
     image: images[0],
     material: row.material || "Crafted Solid Wood & Fine Hardware",
     dimensions: row.dimensions || "Custom Architectural Sizing",
-    stockStatus: (row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")) ? "Hidden" : (row.stock_status || "Active"),
-    isVisible: !(row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")),
+    stockStatus: normalizeStockStatus(row.stock_status),
+    isVisible: row.isvisible !== false,
     sortOrder: row.sort_order || 0,
   };
 }
@@ -101,7 +109,7 @@ router.get("/", async (req, res) => {
     const params = [];
 
     if (all !== "true") {
-      query += ` AND (p.isvisible IS NULL OR p.isvisible = true) AND (p.stock_status IS NULL OR LOWER(p.stock_status) != 'hidden')`;
+      query += ` AND (p.isvisible IS NULL OR p.isvisible = true)`;
     }
 
     if (category && category !== "All") {
@@ -288,15 +296,8 @@ router.put("/:id", adminAuth, async (req, res) => {
       }
     }
 
-    let finalIsVisible = isVisible !== undefined ? isVisible : (isvisible !== undefined ? isvisible : null);
-    let finalStockStatus = stockStatus !== undefined ? stockStatus : null;
-    if (finalStockStatus && finalStockStatus.toLowerCase() === "hidden") {
-      finalIsVisible = false;
-    } else if (finalIsVisible === false && !finalStockStatus) {
-      finalStockStatus = "Hidden";
-    } else if (finalIsVisible === true && (!finalStockStatus || finalStockStatus.toLowerCase() === "hidden")) {
-      finalStockStatus = "Active";
-    }
+    const finalIsVisible = isVisible !== undefined ? isVisible : (isvisible !== undefined ? isvisible : null);
+    const finalStockStatus = stockStatus !== undefined ? stockStatus : null;
 
     const result = await db.query(
       `UPDATE products

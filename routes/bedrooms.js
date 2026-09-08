@@ -4,6 +4,14 @@ import adminAuth from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
+function normalizeStockStatus(status) {
+  if (!status) return "In Stock";
+  const s = String(status).toLowerCase().replace(/[-_]/g, " ").trim();
+  if (s === "low stock" || s === "low") return "Low Stock";
+  if (s === "out of stock" || s === "out") return "Out of Stock";
+  return "In Stock";
+}
+
 function formatBedroom(row) {
   const images = [];
   if (row.img) images.push(row.img);
@@ -41,8 +49,8 @@ function formatBedroom(row) {
     salePrice2: salePrice2Num,
     images: images,
     image: images[0],
-    stockStatus: (row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")) ? "Hidden" : (row.stock_status || "Active"),
-    isVisible: !(row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")),
+    stockStatus: normalizeStockStatus(row.stock_status),
+    isVisible: row.isvisible !== false,
     sortOrder: row.sort_order || 0,
   };
 }
@@ -93,19 +101,20 @@ router.get("/:id", async (req, res) => {
  */
 router.post("/", adminAuth, async (req, res) => {
   try {
-    const { name, desc, img, img2, img3, price, price2, sale_price, isvisible = true, sort_order = 0 } = req.body;
+    const { name, desc, img, img2, img3, price, price2, sale_price, isvisible = true, sort_order = 0, stockStatus, stock_status } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Bedroom piece name is required" });
     }
 
     const cleanPrice = typeof price === "string" ? parseFloat(price.replace(/[^0-9.]/g, "")) || 0 : price;
+    const finalStockStatus = normalizeStockStatus(stockStatus || stock_status);
 
     const result = await db.query(
-      `INSERT INTO bedrooms (name, "desc", img, img2, img3, price, price2, sale_price, isvisible, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO bedrooms (name, "desc", img, img2, img3, price, price2, sale_price, isvisible, sort_order, stock_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [name.trim(), desc || null, img || null, img2 || null, img3 || null, cleanPrice, price2 || null, sale_price || null, isvisible, sort_order]
+      [name.trim(), desc || null, img || null, img2 || null, img3 || null, cleanPrice, price2 || null, sale_price || null, isvisible, sort_order, finalStockStatus]
     );
 
     res.status(201).json(formatBedroom(result.rows[0]));
@@ -165,15 +174,9 @@ router.put("/:id", adminAuth, async (req, res) => {
           : price2
         : null;
 
-    let finalIsVisible = isvisible !== undefined ? isvisible : (isVisible !== undefined ? isVisible : null);
-    const incomingStatus = stockStatus || stock_status;
-    if (incomingStatus) {
-      if (incomingStatus.toLowerCase() === "hidden") {
-        finalIsVisible = false;
-      } else if (finalIsVisible === null) {
-        finalIsVisible = true;
-      }
-    }
+    const finalIsVisible = isvisible !== undefined ? isvisible : (isVisible !== undefined ? isVisible : null);
+    const incomingStatus = stockStatus !== undefined ? stockStatus : stock_status;
+    const finalStockStatus = incomingStatus !== undefined ? normalizeStockStatus(incomingStatus) : null;
 
     const result = await db.query(
       `UPDATE bedrooms
@@ -185,10 +188,11 @@ router.put("/:id", adminAuth, async (req, res) => {
            price = COALESCE($6, price),
            price2 = COALESCE($7, price2),
            isvisible = COALESCE($8, isvisible),
-           sort_order = COALESCE($9, sort_order)
-       WHERE id = $10
+           sort_order = COALESCE($9, sort_order),
+           stock_status = COALESCE($10, stock_status)
+       WHERE id = $11
        RETURNING *`,
-      [name, desc, img, img2, img3, cleanPrice, cleanPrice2, finalIsVisible, sort_order, id]
+      [name, desc, img, img2, img3, cleanPrice, cleanPrice2, finalIsVisible, sort_order, finalStockStatus, id]
     );
 
     if (result.rows.length === 0) {

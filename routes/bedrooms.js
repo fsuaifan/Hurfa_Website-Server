@@ -15,22 +15,33 @@ function formatBedroom(row) {
     );
   }
 
+  const priceNum = row.price ? parseFloat(row.price) : 0;
+  const price2Num = row.price2 ? parseFloat(row.price2) : null;
+  const salePriceNum = row.sale_price ? parseFloat(row.sale_price) : null;
+  const salePrice2Num = row.sale_price2 ? parseFloat(row.sale_price2) : null;
+
   const formattedPrice = row.price
-    ? (String(row.price).startsWith("JOD") ? row.price : `JOD ${Number(row.price).toLocaleString()}`)
+    ? (String(row.price).startsWith("JOD") ? row.price : `JOD ${priceNum.toLocaleString()}`)
     : "Price upon inquiry";
 
   return {
     id: row.id,
     name: row.name,
+    arabicName: row.arabic_nam || "",
     desc: row.desc || row.arabic_desc || "",
+    arabicDesc: row.arabic_desc || "",
     category: "Bedrooms",
     price: formattedPrice,
-    priceNumber: row.price ? parseFloat(row.price) : 0,
-    price2: row.price2 ? parseFloat(row.price2) : null,
-    salePrice: row.sale_price ? parseFloat(row.sale_price) : null,
+    priceNumber: priceNum,
+    price2: price2Num,
+    price2Formatted: price2Num ? `JOD ${price2Num.toLocaleString()}` : null,
+    salePrice: salePriceNum,
+    salePriceFormatted: salePriceNum ? `JOD ${salePriceNum.toLocaleString()}` : null,
+    salePrice2: salePrice2Num,
     images: images,
     image: images[0],
     isVisible: row.isvisible !== false,
+    sortOrder: row.sort_order || 0,
   };
 }
 

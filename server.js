@@ -9,6 +9,7 @@ import userRoutes from "./routes/users.js";
 import kitchenRoutes from "./routes/kitchens.js";
 import bedroomRoutes from "./routes/bedrooms.js";
 import orderRoutes from "./routes/orders.js";
+import clientRoutes from "./routes/clients.js";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/kitchens", kitchenRoutes);
 app.use("/api/bedrooms", bedroomRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/clients", clientRoutes);
 
 // Root Test Route
 app.get("/", (req, res) => {

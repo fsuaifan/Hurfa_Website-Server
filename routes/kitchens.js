@@ -5,131 +5,114 @@ import adminAuth from "../middleware/adminAuth.js";
 const router = express.Router();
 
 // Preset models mapping for detailed architectural showcases matching client data
-const DEFAULT_KITCHEN_MODELS = [
-  {
-    id: "chic",
-    title: "Chic",
-    eyebrow: "Model",
-    tagline: "High-contrast finishes and clean hardware.",
-    desc: "A bold, statement kitchen — high-contrast finishes and clean hardware for a space that stands out.",
-    mainImage: "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
-    variations: [
-      "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Tayf_4iPZv6iGf.png?updatedAt=1782466205843",
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Oud-Collection_u9dsnBlwn.jpg?updatedAt=1787138978278",
-    ],
-    details: [
-      {
-        title: "Cabinetry",
-        copy: "Soft-close hinges and hand-finished panel work, built to hold up to daily use without losing its edge.",
-        image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
-      },
-      {
-        title: "Surfaces",
-        copy: "Countertop and backsplash materials chosen to match the tone of the model, with finishes that resist heat and stains.",
-        image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Tayf_4iPZv6iGf.png?updatedAt=1782466205843",
-      },
-    ],
-  },
-  {
-    id: "organic",
-    title: "Organic Modern",
-    eyebrow: "Model",
-    tagline: "Warm, natural materials and soft lines.",
-    desc: "Warm, natural materials and soft lines — a kitchen that feels grounded and lived-in without giving up a modern edge.",
-    mainImage: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
-    variations: [
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Oud-Collection_u9dsnBlwn.jpg?updatedAt=1787138978278",
-      "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
-    ],
-    details: [
-      {
-        title: "Cabinetry",
-        copy: "Constructed with natural wood grain panels, moisture-resistant sealing, and integrated push-to-open latches.",
-        image: "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
-      },
-      {
-        title: "Surfaces",
-        copy: "Honed natural stone countertops with matching waterfall edges for an unbroken, organic kitchen flow.",
-        image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Oud-Collection_u9dsnBlwn.jpg?updatedAt=1787138978278",
-      },
-    ],
-  },
-  {
-    id: "contemporary",
-    title: "Contemporary",
-    eyebrow: "Model",
-    tagline: "Minimal handles, flat panels, and a restrained palette.",
-    desc: "Minimal handles, flat panels, and a restrained palette — built for a clean, uncluttered everyday kitchen.",
-    mainImage: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Tayf_4iPZv6iGf.png?updatedAt=1782466205843",
-    variations: [
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Tayf_4iPZv6iGf.png?updatedAt=1782466205843",
-      "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Oud-Collection_u9dsnBlwn.jpg?updatedAt=1787138978278",
-      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
-    ],
-    details: [
-      {
-        title: "Cabinetry",
-        copy: "Architectural matte lacquer surfaces with seamless laser edge-banding that repels fingerprints and spills.",
-        image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
-      },
-      {
-        title: "Surfaces",
-        copy: "Ultra-compact sintered porcelain counters engineered to withstand extreme heat, knife marks, and heavy daily cooking.",
-        image: "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
-      },
-    ],
-  },
-];
+// Architectural details mapping per model
+const MODEL_DETAILS_MAP = {
+  chic: [
+    {
+      title: "Cabinetry",
+      copy: "Soft-close hinges and hand-finished panel work, built to hold up to daily use without losing its edge.",
+      image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
+    },
+    {
+      title: "Surfaces",
+      copy: "Countertop and backsplash materials chosen to match the tone of the model, with finishes that resist heat and stains.",
+      image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Tayf_4iPZv6iGf.png?updatedAt=1782466205843",
+    },
+  ],
+  organic: [
+    {
+      title: "Cabinetry",
+      copy: "Constructed with natural wood grain panels, moisture-resistant sealing, and integrated push-to-open latches.",
+      image: "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
+    },
+    {
+      title: "Surfaces",
+      copy: "Honed natural stone countertops with matching waterfall edges for an unbroken, organic kitchen flow.",
+      image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Oud-Collection_u9dsnBlwn.jpg?updatedAt=1787138978278",
+    },
+  ],
+  contemporary: [
+    {
+      title: "Cabinetry",
+      copy: "Architectural matte lacquer surfaces with seamless laser edge-banding that repels fingerprints and spills.",
+      image: "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280",
+    },
+    {
+      title: "Surfaces",
+      copy: "Ultra-compact sintered porcelain counters engineered to withstand extreme heat, knife marks, and heavy daily cooking.",
+      image: "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit3V4.jpg?updatedAt=1779196664060",
+    },
+  ],
+};
+
+function getSlugForKitchen(name, id) {
+  const lower = (name || '').toLowerCase();
+  if (lower.includes('organic')) return 'organic';
+  if (lower.includes('chic')) return 'chic';
+  if (lower.includes('contemporary')) return 'contemporary';
+  if (id === 1) return 'contemporary';
+  if (id === 2) return 'chic';
+  if (id === 3) return 'organic';
+  return String(id);
+}
+
+function getTitleForKitchen(name, id) {
+  const lower = (name || '').toLowerCase();
+  if (lower.includes('organic')) return 'Organic Modern';
+  if (lower.includes('chic')) return 'Chic';
+  if (lower.includes('contemporary')) return 'Contemporary';
+  return name || `Kitchen Model ${id}`;
+}
 
 /**
  * GET /api/kitchens
- * Returns all kitchen models, dynamically merging kitchentype records with variation media
+ * Returns all kitchen models, dynamically querying kitchentype joined with kitchens variations
  */
 router.get("/", async (req, res) => {
   try {
     const dbTypes = await db.query(
       `SELECT kt.*, 
-        json_agg(json_build_object('id', k.id, 'mainimg', k.mainimg, 'varimg', k.varimg)) FILTER (WHERE k.id IS NOT NULL) AS variations
+        json_agg(
+          json_build_object(
+            'id', k.id, 
+            'mainImg', k.mainimg, 
+            'mainImage', k.mainimg, 
+            'varImg', k.varimg, 
+            'varImage', k.varimg
+          ) ORDER BY k.id ASC
+        ) FILTER (WHERE k.id IS NOT NULL) AS variations
        FROM kitchentype kt
-       LEFT JOIN kitchens k ON kt.kitchentypeid = k.kitchentypeid AND k.isvisible = true
+       LEFT JOIN kitchens k ON kt.kitchentypeid = k.kitchentypeid AND (k.isvisible IS NULL OR k.isvisible = true)
        WHERE kt.isvisible = true
        GROUP BY kt.kitchentypeid
        ORDER BY kt.kitchentypeid ASC`
     );
 
     if (dbTypes.rows.length > 0) {
-      const merged = DEFAULT_KITCHEN_MODELS.map((model) => {
-        const matchingDb = dbTypes.rows.find(
-          (t) =>
-            t.kitchenname?.toLowerCase() === model.id.toLowerCase() ||
-            t.kitchenname?.toLowerCase() === model.title.toLowerCase() ||
-            (model.id === "organic" && t.kitchenname?.toLowerCase().includes("organic"))
-        );
+      const models = dbTypes.rows.map((row) => {
+        const slug = getSlugForKitchen(row.kitchenname, row.kitchentypeid);
+        const title = getTitleForKitchen(row.kitchenname, row.kitchentypeid);
+        const variations = row.variations || [];
+        const mainImg = row.img || variations[0]?.mainImg || "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit1V1.png";
 
-        if (matchingDb) {
-          const dbImgs = (matchingDb.variations || [])
-            .map((v) => v.varimg || v.mainimg)
-            .filter(Boolean);
-
-          return {
-            ...model,
-            dbId: matchingDb.kitchentypeid,
-            mainImage: matchingDb.img || model.mainImage,
-            desc: matchingDb.desc || model.desc,
-            variations: dbImgs.length > 0 ? Array.from(new Set([matchingDb.img, ...dbImgs, ...model.variations].filter(Boolean))) : model.variations,
-          };
-        }
-        return model;
+        return {
+          id: slug,
+          dbId: row.kitchentypeid,
+          title: title,
+          name: title,
+          eyebrow: "Model",
+          desc: row.desc || `Experience the perfect blend of architectural style and functionality with our bespoke ${title} kitchen.`,
+          mainImage: mainImg,
+          mainImg: mainImg,
+          variations: variations,
+          details: MODEL_DETAILS_MAP[slug] || MODEL_DETAILS_MAP.chic,
+        };
       });
 
-      return res.json(merged);
+      return res.json(models);
     }
 
-    res.json(DEFAULT_KITCHEN_MODELS);
+    res.json([]);
   } catch (err) {
     console.error("Fetch kitchens error:", err.message);
     res.status(500).json({ error: "Internal server error" });
@@ -161,28 +144,48 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     const lowerId = id.toLowerCase();
 
-    const model = DEFAULT_KITCHEN_MODELS.find(
-      (m) =>
-        m.id.toLowerCase() === lowerId ||
-        m.title.toLowerCase() === lowerId ||
-        (lowerId === "organic-modern" && m.id === "organic")
-    );
-
-    if (model) {
-      return res.json(model);
-    }
-
     const dbResult = await db.query(
-      `SELECT kt.*, json_agg(k.*) AS kitchens
+      `SELECT kt.*, 
+        json_agg(
+          json_build_object(
+            'id', k.id, 
+            'mainImg', k.mainimg, 
+            'mainImage', k.mainimg, 
+            'varImg', k.varimg, 
+            'varImage', k.varimg
+          ) ORDER BY k.id ASC
+        ) FILTER (WHERE k.id IS NOT NULL) AS variations
        FROM kitchentype kt
-       LEFT JOIN kitchens k ON kt.kitchentypeid = k.kitchentypeid
-       WHERE kt.kitchentypeid::text = $1 OR LOWER(kt.kitchenname) = LOWER($1)
+       LEFT JOIN kitchens k ON kt.kitchentypeid = k.kitchentypeid AND (k.isvisible IS NULL OR k.isvisible = true)
+       WHERE kt.kitchentypeid::text = $1 
+          OR LOWER(kt.kitchenname) = $2
+          OR ($2 = 'organic' AND LOWER(kt.kitchenname) LIKE '%organic%')
+          OR ($2 = 'organic-modern' AND LOWER(kt.kitchenname) LIKE '%organic%')
+          OR ($2 = 'contemporary' AND LOWER(kt.kitchenname) LIKE '%contemporary%')
+          OR ($2 = 'chic' AND LOWER(kt.kitchenname) LIKE '%chic%')
        GROUP BY kt.kitchentypeid`,
-      [id]
+      [id, lowerId]
     );
 
     if (dbResult.rows.length > 0) {
-      return res.json(dbResult.rows[0]);
+      const row = dbResult.rows[0];
+      const slug = getSlugForKitchen(row.kitchenname, row.kitchentypeid);
+      const title = getTitleForKitchen(row.kitchenname, row.kitchentypeid);
+      const variations = row.variations || [];
+      const mainImg = row.img || variations[0]?.mainImg || "https://ik.imagekit.io/6dghafkgmq/Kitchens/Kit1V1.png";
+
+      return res.json({
+        id: slug,
+        dbId: row.kitchentypeid,
+        title: title,
+        name: title,
+        eyebrow: "Model",
+        desc: row.desc || `Experience the perfect blend of architectural style and functionality with our bespoke ${title} kitchen.`,
+        mainImage: mainImg,
+        mainImg: mainImg,
+        variations: variations,
+        details: MODEL_DETAILS_MAP[slug] || MODEL_DETAILS_MAP.chic,
+      });
     }
 
     return res.status(404).json({ message: "Kitchen model not found" });

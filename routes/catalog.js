@@ -33,8 +33,8 @@ function formatCatalogItem(row) {
     image: images[0],
     material: row.material || "Crafted Solid Wood & Fine Hardware",
     dimensions: row.dimensions || "Custom Architectural Sizing",
-    stockStatus: row.stock_status || (row.isvisible !== false ? "Active" : "Low Stock"),
-    isVisible: row.isvisible !== false,
+    stockStatus: (row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")) ? "Hidden" : (row.stock_status || "Active"),
+    isVisible: !(row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")),
     sortOrder: row.sort_order || 0,
   };
 }
@@ -87,7 +87,7 @@ router.get("/stats", async (req, res) => {
  */
 router.get("/", async (req, res) => {
   try {
-    const { category, search, sort } = req.query;
+    const { category, search, sort, all } = req.query;
 
     let query = `
       SELECT p.*, c.name AS category_name, c.arabic_name AS category_arabic_name
@@ -96,6 +96,10 @@ router.get("/", async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    if (all !== "true") {
+      query += ` AND (p.isvisible IS NULL OR p.isvisible = true) AND (p.stock_status IS NULL OR LOWER(p.stock_status) != 'hidden')`;
+    }
 
     if (category && category !== "All") {
       params.push(`%${category}%`);
@@ -242,6 +246,16 @@ router.put("/:id", adminAuth, async (req, res) => {
       }
     }
 
+    let finalIsVisible = isVisible !== undefined ? isVisible : (isvisible !== undefined ? isvisible : null);
+    let finalStockStatus = stockStatus !== undefined ? stockStatus : null;
+    if (finalStockStatus && finalStockStatus.toLowerCase() === "hidden") {
+      finalIsVisible = false;
+    } else if (finalIsVisible === false && !finalStockStatus) {
+      finalStockStatus = "Hidden";
+    } else if (finalIsVisible === true && (!finalStockStatus || finalStockStatus.toLowerCase() === "hidden")) {
+      finalStockStatus = "Active";
+    }
+
     const result = await db.query(
       `UPDATE products
        SET name = COALESCE($1, name),
@@ -255,7 +269,7 @@ router.put("/:id", adminAuth, async (req, res) => {
            isvisible = COALESCE($9, isvisible)
        WHERE id = $10
        RETURNING *`,
-      [name, cleanPrice, desc, finalCategoryId, img, material, dimensions, stockStatus, isVisible, id]
+      [name, cleanPrice, desc, finalCategoryId, img, material, dimensions, finalStockStatus, finalIsVisible, id]
     );
 
     res.json(formatCatalogItem(result.rows[0]));

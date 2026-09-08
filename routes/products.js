@@ -39,8 +39,8 @@ function formatProduct(row) {
     image: images[0],
     material: row.material || "Crafted Solid Wood & Fine Hardware",
     dimensions: row.dimensions || "Custom Architectural Sizing",
-    stockStatus: row.stock_status || (row.isvisible !== false ? "Active" : "Low Stock"),
-    isVisible: row.isvisible !== false,
+    stockStatus: (row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")) ? "Hidden" : (row.stock_status || "Active"),
+    isVisible: !(row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")),
     sortOrder: row.sort_order || 0,
   };
 }
@@ -90,15 +90,19 @@ function formatPremiumCollection(row) {
  */
 router.get("/", async (req, res) => {
   try {
-    const { category, search, sort } = req.query;
+    const { category, search, sort, all } = req.query;
 
     let query = `
       SELECT p.*, c.name AS category_name, c.arabic_name AS category_arabic_name
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-      WHERE (p.isvisible IS NULL OR p.isvisible = true)
+      WHERE 1=1
     `;
     const params = [];
+
+    if (all !== "true") {
+      query += ` AND (p.isvisible IS NULL OR p.isvisible = true) AND (p.stock_status IS NULL OR LOWER(p.stock_status) != 'hidden')`;
+    }
 
     if (category && category !== "All") {
       params.push(`%${category}%`);
@@ -261,7 +265,7 @@ router.put("/sort", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, desc, category, category_id, img, material, dimensions, stockStatus } = req.body;
+    const { name, price, desc, category, category_id, img, material, dimensions, stockStatus, isVisible, isvisible } = req.body;
 
     const existing = await db.query("SELECT * FROM products WHERE id = $1", [id]);
     if (existing.rows.length === 0) {
@@ -284,6 +288,16 @@ router.put("/:id", adminAuth, async (req, res) => {
       }
     }
 
+    let finalIsVisible = isVisible !== undefined ? isVisible : (isvisible !== undefined ? isvisible : null);
+    let finalStockStatus = stockStatus !== undefined ? stockStatus : null;
+    if (finalStockStatus && finalStockStatus.toLowerCase() === "hidden") {
+      finalIsVisible = false;
+    } else if (finalIsVisible === false && !finalStockStatus) {
+      finalStockStatus = "Hidden";
+    } else if (finalIsVisible === true && (!finalStockStatus || finalStockStatus.toLowerCase() === "hidden")) {
+      finalStockStatus = "Active";
+    }
+
     const result = await db.query(
       `UPDATE products
        SET name = COALESCE($1, name),
@@ -293,10 +307,11 @@ router.put("/:id", adminAuth, async (req, res) => {
            img = COALESCE($5, img),
            material = COALESCE($6, material),
            dimensions = COALESCE($7, dimensions),
-           stock_status = COALESCE($8, stock_status)
-       WHERE id = $9
+           stock_status = COALESCE($8, stock_status),
+           isvisible = COALESCE($9, isvisible)
+       WHERE id = $10
        RETURNING *`,
-      [name, cleanPrice, desc, finalCategoryId, img, material, dimensions, stockStatus, id]
+      [name, cleanPrice, desc, finalCategoryId, img, material, dimensions, finalStockStatus, finalIsVisible, id]
     );
 
     res.json(formatProduct(result.rows[0]));

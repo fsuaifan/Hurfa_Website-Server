@@ -41,8 +41,8 @@ function formatBedroom(row) {
     salePrice2: salePrice2Num,
     images: images,
     image: images[0],
-    stockStatus: row.stock_status || (row.isvisible !== false ? "Active" : "Low Stock"),
-    isVisible: row.isvisible !== false,
+    stockStatus: (row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")) ? "Hidden" : (row.stock_status || "Active"),
+    isVisible: !(row.isvisible === false || (row.stock_status && row.stock_status.toLowerCase() === "hidden")),
     sortOrder: row.sort_order || 0,
   };
 }
@@ -149,7 +149,7 @@ router.put("/sort", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, desc, img, img2, img3, price, price2, isvisible, isVisible, sort_order } = req.body;
+    const { name, desc, img, img2, img3, price, price2, isvisible, isVisible, stockStatus, stock_status, sort_order } = req.body;
 
     const cleanPrice =
       price !== undefined
@@ -165,7 +165,15 @@ router.put("/:id", adminAuth, async (req, res) => {
           : price2
         : null;
 
-    const finalIsVisible = isvisible !== undefined ? isvisible : (isVisible !== undefined ? isVisible : null);
+    let finalIsVisible = isvisible !== undefined ? isvisible : (isVisible !== undefined ? isVisible : null);
+    const incomingStatus = stockStatus || stock_status;
+    if (incomingStatus) {
+      if (incomingStatus.toLowerCase() === "hidden") {
+        finalIsVisible = false;
+      } else if (finalIsVisible === null) {
+        finalIsVisible = true;
+      }
+    }
 
     const result = await db.query(
       `UPDATE bedrooms

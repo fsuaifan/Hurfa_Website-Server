@@ -42,9 +42,45 @@ function formatProduct(row) {
   };
 }
 
+function formatPremiumCollection(row) {
+  const priceNum = row.price ? parseFloat(row.price) : 0;
+  const salePriceNum = row.sale_price ? parseFloat(row.sale_price) : null;
+  const images = [];
+  if (row.main_img) images.push(row.main_img);
+  if (row.img1) images.push(row.img1);
+  if (row.img2) images.push(row.img2);
+  if (row.img3) images.push(row.img3);
+  if (row.img4) images.push(row.img4);
+  if (images.length === 0) {
+    images.push(
+      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280"
+    );
+  }
+
+  const isOud = (row.name || '').toLowerCase().includes('oud');
+  const isWesal = (row.name || '').toLowerCase().includes('wesal');
+
+  return {
+    id: row.id,
+    title: row.name,
+    name: row.name,
+    tagline: isOud ? 'Solid Oak & Bouclé' : isWesal ? 'Walnut & Architectural Linen' : 'Architectural Suite',
+    desc: row.desc || 'Signature whole-room collection engineered with unified tone and fine materials.',
+    description: row.desc || 'Signature whole-room collection engineered with unified tone and fine materials.',
+    price: `JOD ${priceNum.toLocaleString()}`,
+    priceNumber: priceNum,
+    priceRange: salePriceNum ? `JOD ${salePriceNum.toLocaleString()}` : `JOD ${priceNum.toLocaleString()}`,
+    salePrice: salePriceNum,
+    salePriceFormatted: salePriceNum ? `JOD ${salePriceNum.toLocaleString()}` : null,
+    image: row.main_img || images[0],
+    mainImage: row.main_img || images[0],
+    images: images,
+  };
+}
+
 /**
  * GET /api/products
- * Optional Query Params: ?category=..., ?search=..., ?sort=price-low|price-high
+ * Optional Query Params: ?category=..., ?search=..., ?sort=price-low|price-high|newest
  */
 router.get("/", async (req, res) => {
   try {
@@ -68,10 +104,12 @@ router.get("/", async (req, res) => {
       query += ` AND (LOWER(p.name) LIKE LOWER($${params.length}) OR LOWER(p.desc1) LIKE LOWER($${params.length}) OR LOWER(c.name) LIKE LOWER($${params.length}))`;
     }
 
-    if (sort === "price-low") {
-      query += " ORDER BY p.price ASC NULLS LAST, p.id ASC";
-    } else if (sort === "price-high") {
-      query += " ORDER BY p.price DESC NULLS LAST, p.id ASC";
+    if (sort === "price-low" || sort === "price_asc") {
+      query += " ORDER BY COALESCE(p.sale_price, p.price) ASC NULLS LAST, p.id ASC";
+    } else if (sort === "price-high" || sort === "price_desc") {
+      query += " ORDER BY COALESCE(p.sale_price, p.price) DESC NULLS LAST, p.id ASC";
+    } else if (sort === "newest") {
+      query += " ORDER BY p.id DESC";
     } else {
       query += " ORDER BY p.sort_order ASC, p.id ASC";
     }
@@ -80,6 +118,43 @@ router.get("/", async (req, res) => {
     res.json(result.rows.map(formatProduct));
   } catch (err) {
     console.error("Fetch products error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/products/premium
+ */
+router.get("/premium", async (req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT * FROM premium_collection ORDER BY id ASC"
+    );
+    res.json(result.rows.map(formatPremiumCollection));
+  } catch (err) {
+    console.error("Fetch premium collections error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/products/premium/:id
+ */
+router.get("/premium/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      "SELECT * FROM premium_collection WHERE id::text = $1 OR LOWER(name) = LOWER($1)",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Premium collection not found" });
+    }
+
+    res.json(formatPremiumCollection(result.rows[0]));
+  } catch (err) {
+    console.error("Get premium collection error:", err.message);
     res.status(500).json({ error: "Internal server error" });
   }
 });

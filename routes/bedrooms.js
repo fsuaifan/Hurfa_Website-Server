@@ -41,6 +41,7 @@ function formatBedroom(row) {
     salePrice2: salePrice2Num,
     images: images,
     image: images[0],
+    stockStatus: row.stock_status || (row.isvisible !== false ? "Active" : "Low Stock"),
     isVisible: row.isvisible !== false,
     sortOrder: row.sort_order || 0,
   };
@@ -51,8 +52,10 @@ function formatBedroom(row) {
  */
 router.get("/", async (req, res) => {
   try {
+    const { all } = req.query;
+    const filter = all === "true" ? "" : "WHERE (isvisible IS NULL OR isvisible = true)";
     const result = await db.query(
-      "SELECT * FROM bedrooms WHERE (isvisible IS NULL OR isvisible = true) ORDER BY sort_order ASC, id ASC"
+      `SELECT * FROM bedrooms ${filter} ORDER BY sort_order ASC, id ASC`
     );
 
     res.json(result.rows.map(formatBedroom));
@@ -146,7 +149,7 @@ router.put("/sort", adminAuth, async (req, res) => {
 router.put("/:id", adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, desc, img, img2, img3, price, isvisible, sort_order } = req.body;
+    const { name, desc, img, img2, img3, price, price2, isvisible, isVisible, sort_order } = req.body;
 
     const cleanPrice =
       price !== undefined
@@ -154,6 +157,15 @@ router.put("/:id", adminAuth, async (req, res) => {
           ? parseFloat(price.replace(/[^0-9.]/g, "")) || null
           : price
         : null;
+
+    const cleanPrice2 =
+      price2 !== undefined
+        ? typeof price2 === "string"
+          ? parseFloat(price2.replace(/[^0-9.]/g, "")) || null
+          : price2
+        : null;
+
+    const finalIsVisible = isvisible !== undefined ? isvisible : (isVisible !== undefined ? isVisible : null);
 
     const result = await db.query(
       `UPDATE bedrooms
@@ -163,11 +175,12 @@ router.put("/:id", adminAuth, async (req, res) => {
            img2 = COALESCE($4, img2),
            img3 = COALESCE($5, img3),
            price = COALESCE($6, price),
-           isvisible = COALESCE($7, isvisible),
-           sort_order = COALESCE($8, sort_order)
-       WHERE id = $9
+           price2 = COALESCE($7, price2),
+           isvisible = COALESCE($8, isvisible),
+           sort_order = COALESCE($9, sort_order)
+       WHERE id = $10
        RETURNING *`,
-      [name, desc, img, img2, img3, cleanPrice, isvisible, sort_order, id]
+      [name, desc, img, img2, img3, cleanPrice, cleanPrice2, finalIsVisible, sort_order, id]
     );
 
     if (result.rows.length === 0) {

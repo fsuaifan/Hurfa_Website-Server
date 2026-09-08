@@ -4,6 +4,7 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import db from "./db/db.js";
 import authRoutes from "./routes/auth.js";
+import productRoutes from "./routes/products.js";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(morgan("dev"));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 
 // Root Test Route
 app.get("/", (req, res) => {

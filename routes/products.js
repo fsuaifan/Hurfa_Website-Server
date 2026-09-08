@@ -1,0 +1,221 @@
+import express from "express";
+import db from "../db/db.js";
+import adminAuth from "../middleware/adminAuth.js";
+
+const router = express.Router();
+
+/**
+ * Helper function to format product records for consistent client response
+ */
+function formatProduct(row) {
+  const priceNum = row.price ? parseFloat(row.price) : 0;
+  const formattedPrice = row.price
+    ? (String(row.price).startsWith("JOD") ? row.price : `JOD ${Number(row.price).toLocaleString()}`)
+    : "Price upon inquiry";
+
+  const images = [];
+  if (row.img) images.push(row.img);
+  if (row.img2) images.push(row.img2);
+  if (row.img3) images.push(row.img3);
+  if (images.length === 0) {
+    images.push(
+      "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280"
+    );
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    desc: row.desc1 || row.desc || row.arabic_desc || "",
+    category: row.category_name || row.category || "General",
+    categoryId: row.category_id,
+    price: formattedPrice,
+    priceNumber: priceNum,
+    salePrice: row.sale_price ? parseFloat(row.sale_price) : null,
+    images: images,
+    image: images[0],
+    material: row.material || "Crafted Solid Wood & Fine Hardware",
+    dimensions: row.dimensions || "Custom Architectural Sizing",
+    stockStatus: row.stock_status || (row.isvisible !== false ? "Active" : "Low Stock"),
+    isVisible: row.isvisible !== false,
+    sortOrder: row.sort_order || 0,
+  };
+}
+
+/**
+ * GET /api/products
+ * Optional Query Params: ?category=..., ?search=..., ?sort=price-low|price-high
+ */
+router.get("/", async (req, res) => {
+  try {
+    const { category, search, sort } = req.query;
+
+    let query = `
+      SELECT p.*, c.name AS category_name, c.arabic_name AS category_arabic_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE (p.isvisible IS NULL OR p.isvisible = true)
+    `;
+    const params = [];
+
+    if (category && category !== "All") {
+      params.push(`%${category}%`);
+      query += ` AND (LOWER(c.name) LIKE LOWER($${params.length}) OR LOWER(p.name) LIKE LOWER($${params.length}))`;
+    }
+
+    if (search && search.trim()) {
+      params.push(`%${search.trim()}%`);
+      query += ` AND (LOWER(p.name) LIKE LOWER($${params.length}) OR LOWER(p.desc1) LIKE LOWER($${params.length}) OR LOWER(c.name) LIKE LOWER($${params.length}))`;
+    }
+
+    if (sort === "price-low") {
+      query += " ORDER BY p.price ASC NULLS LAST, p.id ASC";
+    } else if (sort === "price-high") {
+      query += " ORDER BY p.price DESC NULLS LAST, p.id ASC";
+    } else {
+      query += " ORDER BY p.sort_order ASC, p.id ASC";
+    }
+
+    const result = await db.query(query, params);
+    res.json(result.rows.map(formatProduct));
+  } catch (err) {
+    console.error("Fetch products error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/products/:id
+ */
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      `SELECT p.*, c.name AS category_name, c.arabic_name AS category_arabic_name
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
+       WHERE p.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.json(formatProduct(result.rows[0]));
+  } catch (err) {
+    console.error("Get product error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/products
+ * Protected by adminAuth
+ */
+router.post("/", adminAuth, async (req, res) => {
+  try {
+    const { name, price, desc, category, category_id, img, material, dimensions, stockStatus } = req.body;
+
+    if (!name || price === undefined || price === null) {
+      return res.status(400).json({ message: "Product name and price are required" });
+    }
+
+    const cleanPrice = typeof price === "string" ? parseFloat(price.replace(/[^0-9.]/g, "")) || 0 : price;
+    const finalImg = img || "https://ik.imagekit.io/6dghafkgmq/hurfa_catalog/Wesal-Collection_n299cVlM5.jpg?updatedAt=1787138960280";
+
+    let finalCategoryId = category_id || null;
+    if (!finalCategoryId && category) {
+      const catLookup = await db.query("SELECT id FROM categories WHERE LOWER(name) = LOWER($1)", [category]);
+      if (catLookup.rows.length > 0) {
+        finalCategoryId = catLookup.rows[0].id;
+      }
+    }
+
+    const result = await db.query(
+      `INSERT INTO products (name, price, desc1, category_id, img, material, dimensions, stock_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [name.trim(), cleanPrice, desc || null, finalCategoryId, finalImg, material || null, dimensions || null, stockStatus || "Active"]
+    );
+
+    res.status(201).json(formatProduct(result.rows[0]));
+  } catch (err) {
+    console.error("Create product error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * PUT /api/products/:id
+ * Protected by adminAuth
+ */
+router.put("/:id", adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, price, desc, category, category_id, img, material, dimensions, stockStatus } = req.body;
+
+    const existing = await db.query("SELECT * FROM products WHERE id = $1", [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const current = existing.rows[0];
+    const cleanPrice =
+      price !== undefined
+        ? typeof price === "string"
+          ? parseFloat(price.replace(/[^0-9.]/g, "")) || current.price
+          : price
+        : current.price;
+
+    let finalCategoryId = category_id !== undefined ? category_id : current.category_id;
+    if (category && category !== "All") {
+      const catLookup = await db.query("SELECT id FROM categories WHERE LOWER(name) = LOWER($1)", [category]);
+      if (catLookup.rows.length > 0) {
+        finalCategoryId = catLookup.rows[0].id;
+      }
+    }
+
+    const result = await db.query(
+      `UPDATE products
+       SET name = COALESCE($1, name),
+           price = COALESCE($2, price),
+           desc1 = COALESCE($3, desc1),
+           category_id = COALESCE($4, category_id),
+           img = COALESCE($5, img),
+           material = COALESCE($6, material),
+           dimensions = COALESCE($7, dimensions),
+           stock_status = COALESCE($8, stock_status)
+       WHERE id = $9
+       RETURNING *`,
+      [name, cleanPrice, desc, finalCategoryId, img, material, dimensions, stockStatus, id]
+    );
+
+    res.json(formatProduct(result.rows[0]));
+  } catch (err) {
+    console.error("Update product error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * DELETE /api/products/:id
+ * Protected by adminAuth
+ */
+router.delete("/:id", adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query("DELETE FROM products WHERE id = $1 RETURNING *", [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.json({ message: "Product deleted", deleted: result.rows[0] });
+  } catch (err) {
+    console.error("Delete product error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export default router;

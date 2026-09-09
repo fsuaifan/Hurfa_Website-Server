@@ -287,6 +287,10 @@ router.put("/:id", adminAuth, async (req, res) => {
 router.delete("/:id", adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    // Clean up any referenced cart rows first
+    await db.query("DELETE FROM carts WHERE product_id = $1", [id]).catch((e) =>
+      console.warn("Cart cleanup warning on product delete:", e.message)
+    );
     const result = await db.query("DELETE FROM products WHERE id = $1 RETURNING *", [id]);
 
     if (result.rows.length === 0) {

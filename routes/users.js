@@ -175,9 +175,10 @@ router.get("/cart/:email", async (req, res) => {
 router.delete("/cart/:email/:productId", async (req, res) => {
   try {
     const { email, productId } = req.params;
+    const cleanId = String(productId).split("-")[0];
     await db.query(
-      "DELETE FROM carts WHERE LOWER(user_email) = LOWER($1) AND product_id = $2",
-      [email.trim(), productId]
+      "DELETE FROM carts WHERE LOWER(user_email) = LOWER($1) AND (product_id::text = $2 OR id::text = $2 OR product_id::text = $3)",
+      [email.trim(), String(productId), cleanId]
     );
 
     const result = await db.query(
